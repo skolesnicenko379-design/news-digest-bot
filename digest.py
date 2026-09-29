@@ -6,23 +6,21 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
 
-# Функція для збору свіжих заголовків з відкритих RSS-стрічок новин
 def fetch_rss_news():
     feeds = [
-        "https://www.pravda.com.ua/rss/", # Українська правда
-        "https://rssexport.rbc.ua/inter/ukr/news.rss", # РБК-Україна
-        "https://news.google.com/rss/search?q=geopolitics+ukraine+when:1d&hl=en-US&gl=US&ceid=US:en" # Google News по свіжих геополітичних новинах
+        "https://www.pravda.com.ua/rss/",
+        "https://rssexport.rbc.ua/inter/ukr/news.rss"
     ]
     
     news_text = "ОСЬ РЕАЛЬНІ НОВИНИ ЗА ОСТАННІ ДОБИ З ІНТЕРНЕТУ:\n"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     
     for feed_url in feeds:
         try:
-            response = requests.get(feed_url, timeout=5)
+            response = requests.get(feed_url, headers=headers, timeout=5)
             if response.status_code == 200:
                 root = ET.fromstring(response.content)
-                # Шукаємо елементи item (новини)
-                for item in root.findall('.//item')[:5]: # беремо по 5 останніх з кожного джерела
+                for item in root.findall('.//item')[:5]:
                     title = item.find('title')
                     if title is not None and title.text:
                         news_text += f"- {title.text.strip()}\n"
@@ -49,7 +47,7 @@ def generate_digest(news_context):
 - Мова виключно українська.
 - Стиль: Аналітичний, стриманий, реалістичний (realpolitik).
 - Оформлення пунктів: Кожен пункт має бути написаний **в один рядок** (без переносів рядків всередині пункту). 
-- Формат пункту: `- <b>Коротка теза:</b> Суть події з аналітичним коментарем. (Джерело)`
+- Формат пункту: `- <b>Коротка теза:</b> Суть події з аналітичним коментарем.`
 - ЗАБОРОНЕНО використовувати заголовки суцільним КАПСЛОКОМ та таблиці.
 - Усі HTML-теги повинні закриватися в межах одного абзацу.
 """
