@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -14,14 +15,12 @@ def get_active_groq_model(headers):
             models = response.json().get("data", [])
             for model in models:
                 model_id = model["id"]
-                # Шукаємо саме базові генеративні моделі (Llama або GPT) і уникаємо guard/embedding/whisper
                 if any(name in model_id.lower() for name in ["llama", "gpt"]) and not any(bad in model_id.lower() for bad in ["guard", "whisper", "embed", "vision"]):
                     print(f"Знайдено повноцінну модель для генерації: {model_id}")
                     return model_id
     except Exception as e:
         print(f"Не вдалося отримати список моделей автоматично: {e}")
     
-    # Запасний надійний варіант
     return "openai/gpt-oss-20b"
 
 def generate_digest():
@@ -31,8 +30,9 @@ def generate_digest():
     }
     
     model_name = get_active_groq_model(headers)
+    current_date = datetime.now().strftime("%d.%m.%Y")
 
-    prompt = """
+    prompt = f"""
 Ти — професійний геополітичний аналітик, який пише у стилі класичного реалізму (realpolitik). Ти оцінюєш події через призму національних інтересів, балансу сил, прагматики, економічних ресурсів та реальних дій держав, а не декларацій.
 
 ПИСЬМОВИЙ СТИЛЬ:
