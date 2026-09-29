@@ -5,7 +5,34 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
 
+def get_active_groq_model(headers):
+    """Автоматично отримує першу доступну робочу модель з API Groq"""
+    try:
+        url = "https://api.groq.com/openai/v1/models"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            models = response.json().get("data", [])
+            # Шукаємо текстову модель, яка підтримується
+            for model in models:
+                model_id = model["id"]
+                if "chat" in model_id.lower() or "gpt" in model_id.lower() or "llama" in model_id.lower():
+                    print(f"Знайдено активну модель: {model_id}")
+                    return model_id
+    except Exception as e:
+        print(f"Не вдалося отримати список моделей автоматично: {e}")
+    
+    # Резервний варіант за замовчуванням
+    return "openai/gpt-oss-20b"
+
 def generate_digest():
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Автоматично визначаємо актуальну модель
+    model_name = get_active_groq_model(headers)
+
     prompt = """
 Ти — професійний геополітичний аналітик та персональний помічник. Твоє завдання — підготувати глибокий, аналітичний дайджест найважливіших подій та новин за останню добу, спираючись на світові тенденції, аналітику провідних видань (Financial Times, The Economist, Reuters, Bloomberg) та український контекст.
 
@@ -26,12 +53,8 @@ def generate_digest():
 """
 
     url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
     payload = {
-        "model": "openai/gpt-oss-20b",  # Актуальний та стабільний ідентифікатор моделі на Groq
+        "model": model_name,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.4
     }
