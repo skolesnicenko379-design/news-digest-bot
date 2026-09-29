@@ -4,34 +4,38 @@ import xml.etree.ElementTree as ET
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
+TELEGRAM_CHANNEL_ID = os.environ.get("-1002289800002")
 
-def fetch_rss_news():
+def fetch_custom_rss():
+    # Список RSS-стрічок бажаних авторитетних видань та глобальних агенцій
     feeds = [
-        "https://www.pravda.com.ua/rss/",
-        "https://rssexport.rbc.ua/inter/ukr/news.rss"
+        "https://www.ft.com/rss/home/international", # Financial Times (міжнародні новини)
+        "https://www.economist.com/international/rss.xml", # The Economist
+        "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml", # Reuters
+        "https://www.pravda.com.ua/rss/" # Українська правда (для якісного контексту української політики)
     ]
     
-    news_text = "ОСЬ РЕАЛЬНІ НОВИНИ ЗА ОСТАННІ ДОБИ З ІНТЕРНЕТУ:\n"
+    news_text = "ОСЬ МАТЕРІАЛИ ТА ЗАГОЛОВКИ З ОБРАНИХ ВИДАНЬ ЗА ОСТАННІ ДОБИ:\n"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     
     for feed_url in feeds:
         try:
-            response = requests.get(feed_url, headers=headers, timeout=5)
+            response = requests.get(feed_url, headers=headers, timeout=6)
             if response.status_code == 200:
                 root = ET.fromstring(response.content)
-                for item in root.findall('.//item')[:5]:
+                # Беремо свіжі публікації з кожного обраного джерела
+                for item in root.findall('.//item')[:4]:
                     title = item.find('title')
                     if title is not None and title.text:
-                        news_text += f"- {title.text.strip()}\n"
+                        news_text += f"- [Джерело: {feed_url.split('/')[2]}] {title.text.strip()}\n"
         except Exception as e:
-            print(f"Помилка збору RSS {feed_url}: {e}")
+            print(f"Не вдалося зчитати стрічку {feed_url}: {e}")
             
     return news_text
 
 def generate_digest(news_context):
     prompt = f"""
-Ти — професійний геополітичний аналітик та персональний помічник. На основі наданих нижче **реальних заголовків новин** підготуй глибокий, структурований та аналітичний дайджест українською мовою за останню добу. Не вигадуй події, спирайся на факти з контексту нижче.
+Ти — професійний геополітичний аналітик та персональний помічник. На основі наданих нижче **реальних заголовків з авторитетних світових видань (Financial Times, The Economist, Reuters тощо)** підготуй глибокий, структурований та аналітичний дайджест українською мовою за останню добу. Аналізуй тренди, а не просто переказуй заголовки.
 
 {news_context}
 
@@ -45,9 +49,9 @@ def generate_digest(news_context):
 
 ### Вимоги до оформлення та синтаксису (СУВОРО ДОТРИМУЙСЯ):
 - Мова виключно українська.
-- Стиль: Аналітичний, стриманий, реалістичний (realpolitik).
-- Оформлення пунктів: Кожен пункт має бути написаний **в один рядок** (без переносів рядків всередині пункту). 
-- Формат пункту: `- <b>Коротка теза:</b> Суть події з аналітичним коментарем.`
+- Стиль: Глибокий аналітичний, стриманий, реалістичний (realpolitik).
+- Оформлення пунктів: Кожен пункт має бути написаний **в один рядок** (без переносів всередині). 
+- Формат пункту: `- <b>Коротка теза:</b> Аналітичний висновок та суть події.`
 - ЗАБОРОНЕНО використовувати заголовки суцільним КАПСЛОКОМ та таблиці.
 - Усі HTML-теги повинні закриватися в межах одного абзацу.
 """
@@ -81,10 +85,10 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {response.text}")
 
 if __name__ == "__main__":
-    print("Збираємо актуальні новини через стрічки...")
-    news_data = fetch_rss_news()
+    print("Збираємо аналітику з обраних видань...")
+    news_data = fetch_custom_rss()
     
-    print("Генеруємо аналітичний дайджест через Groq...")
+    print("Генеруємо дайджест через Groq...")
     text = generate_digest(news_data)
     
     print("Відправляємо в Telegram...")
