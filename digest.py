@@ -6,22 +6,22 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
 
 def get_active_groq_model(headers):
-    """Автоматично отримує першу доступну робочу модель з API Groq"""
+    """Шукає виключно робочу генеративну модель, ігноруючи системні та захисні сервіси"""
     try:
         url = "https://api.groq.com/openai/v1/models"
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             models = response.json().get("data", [])
-            # Шукаємо текстову модель, яка підтримується
             for model in models:
                 model_id = model["id"]
-                if "chat" in model_id.lower() or "gpt" in model_id.lower() or "llama" in model_id.lower():
-                    print(f"Знайдено активну модель: {model_id}")
+                # Шукаємо саме базові генеративні моделі (Llama або GPT) і уникаємо guard/embedding/whisper
+                if any(name in model_id.lower() for name in ["llama", "gpt"]) and not any(bad in model_id.lower() for bad in ["guard", "whisper", "embed", "vision"]):
+                    print(f"Знайдено повноцінну модель для генерації: {model_id}")
                     return model_id
     except Exception as e:
         print(f"Не вдалося отримати список моделей автоматично: {e}")
     
-    # Резервний варіант за замовчуванням
+    # Запасний надійний варіант
     return "openai/gpt-oss-20b"
 
 def generate_digest():
@@ -30,7 +30,6 @@ def generate_digest():
         "Content-Type": "application/json"
     }
     
-    # Автоматично визначаємо актуальну модель
     model_name = get_active_groq_model(headers)
 
     prompt = """
