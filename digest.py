@@ -30,8 +30,9 @@ def generate_digest():
 - ЗАБОРОНЕНО використовувати заголовки суцільним КАПСЛОКОМ та таблиці.
 """
 
+        # Оновлено модель на актуальну gemini-3.8-flash
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt,
         )
         return response.text
