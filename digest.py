@@ -4,38 +4,40 @@ import xml.etree.ElementTree as ET
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHANNEL_ID = os.environ.get("-1002289800002")
+TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
 
 def fetch_custom_rss():
-    # Список RSS-стрічок бажаних авторитетних видань та глобальних агенцій
+    # Надійні джерела світової аналітики та новин
     feeds = [
-        "https://www.ft.com/rss/home/international", # Financial Times (міжнародні новини)
-        "https://www.economist.com/international/rss.xml", # The Economist
-        "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml", # Reuters
-        "https://www.pravda.com.ua/rss/" # Українська правда (для якісного контексту української політики)
+        "https://www.pravda.com.ua/rss/", # Українська правда
+        "https://rssexport.rbc.ua/inter/ukr/news.rss", # РБК-Україна
+        "https://feeds.bbci.co.uk/news/world/rss.xml", # BBC World (стабільний міжнародний RSS)
+        "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml" # Reuters
     ]
     
     news_text = "ОСЬ МАТЕРІАЛИ ТА ЗАГОЛОВКИ З ОБРАНИХ ВИДАНЬ ЗА ОСТАННІ ДОБИ:\n"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     
     for feed_url in feeds:
         try:
-            response = requests.get(feed_url, headers=headers, timeout=6)
+            response = requests.get(feed_url, headers=headers, timeout=8)
             if response.status_code == 200:
                 root = ET.fromstring(response.content)
-                # Беремо свіжі публікації з кожного обраного джерела
+                source_name = feed_url.split('/')[2].replace('www.', '')
                 for item in root.findall('.//item')[:4]:
                     title = item.find('title')
                     if title is not None and title.text:
-                        news_text += f"- [Джерело: {feed_url.split('/')[2]}] {title.text.strip()}\n"
+                        news_text += f"- [Джерело: {source_name}] {title.text.strip()}\n"
         except Exception as e:
-            print(f"Не вдалося зчитати стрічку {feed_url}: {e}")
+            print(f"Пропускаємо джерело через помилку зв'язку {feed_url}: {e}")
             
     return news_text
 
 def generate_digest(news_context):
     prompt = f"""
-Ти — професійний геополітичний аналітик та персональний помічник. На основі наданих нижче **реальних заголовків з авторитетних світових видань (Financial Times, The Economist, Reuters тощо)** підготуй глибокий, структурований та аналітичний дайджест українською мовою за останню добу. Аналізуй тренди, а не просто переказуй заголовки.
+Ти — професійний геополітичний аналітик та персональний помічник. На основі наданих нижче **реальних заголовків з провідних світових та українських видань** підготуй глибокий, структурований та аналітичний дайджест українською мовою за останню добу. Аналізуй тренди, спираючись виключно на факти з контексту нижче.
 
 {news_context}
 
