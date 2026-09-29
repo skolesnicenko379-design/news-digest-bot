@@ -2,6 +2,7 @@ name: Daily News Digest
 
 on:
   schedule:
+    # Запуск щодня о 05:00 UTC (08:00 за київським часом)
     - cron: '0 5 * * *'
   workflow_dispatch:
 
