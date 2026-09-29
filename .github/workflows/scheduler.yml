@@ -2,7 +2,6 @@ name: Daily News Digest
 
 on:
   schedule:
-    # Запуск щодня о 05:00 UTC (08:00 за київським часом)
     - cron: '0 5 * * *'
   workflow_dispatch:
 
@@ -21,11 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests google-genai
+          pip install requests
 
       - name: Run script
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
         run: python digest.py
