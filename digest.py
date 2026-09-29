@@ -31,7 +31,7 @@ def generate_digest():
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "llama-3.1-8b-instant",  # Оновлено на активну та швидку модель Groq
+        "model": "openai/gpt-oss-20b",  # Актуальний та стабільний ідентифікатор моделі на Groq
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.4
     }
@@ -53,7 +53,7 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {response.text}")
 
 if __name__ == "__main__":
-    print("Генеруємо дайджест через Groq (Llama 3.1)...")
+    print("Генеруємо дайджест через Groq...")
     text = generate_digest()
     
     print("Відправляємо в Telegram...")
