@@ -7,7 +7,8 @@ ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace(
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
 
-# Новий воркспейс для нового ключа
+# Змінна для моделі, яка тепер керується через конфіг GitHub Actions
+ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-latest").strip()
 WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
 
 def fetch_latest_news():
@@ -70,16 +71,16 @@ def generate_digest():
     }
 
     payload = {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": ANTHROPIC_MODEL,
         "max_tokens": 1500,
         "messages": [{"role": "user", "content": prompt}]
     }
     
     url = "https://api.anthropic.com/v1/messages"
-    res = requests.post(url, headers=headers, json=payload)
+    res = requests.post(url, headers=headers, json=payload, timeout=60)
 
     if res.status_code != 200:
-        raise Exception(f"Помилка від Claude API: {res.text}")
+        raise Exception(f"Помилка від Claude API ({res.status_code}): {res.text}")
         
     return res.json()['content'][0]['text']
 
@@ -91,7 +92,7 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {res.text}")
 
 if __name__ == "__main__":
-    print("Генеруємо дайджест через Claude...")
+    print(f"Генеруємо дайджест через Claude (модель: {ANTHROPIC_MODEL})...")
     output = generate_digest()
     print("Відправляємо в Telegram...")
     send_to_telegram(output)
