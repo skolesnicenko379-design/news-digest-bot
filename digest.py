@@ -62,7 +62,7 @@ def generate_digest():
 
     url = "https://api.anthropic.com/v1/messages"
     payload = {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-3-haiku-20240307",
         "max_tokens": 1500,
         "messages": [{"role": "user", "content": prompt}]
     }
