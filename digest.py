@@ -6,6 +6,7 @@ from datetime import datetime
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
+WORKSPACE_ID = "Wrkspc_01EMEbmAkwMkFZNa67ST83sm"
 
 def fetch_latest_news():
     feeds = [
@@ -30,29 +31,17 @@ def fetch_latest_news():
             pass
     return news_text
 
-def get_workspace_id(base_headers):
-    try:
-        url = "https://api.anthropic.com/v1/workspaces"
-        res = requests.get(url, headers=base_headers, timeout=5)
-        if res.status_code == 200:
-            data = res.json().get("data", [])
-            if data:
-                return data[0].get("id")
-    except Exception:
-        pass
-    return None
-
 def generate_digest():
     current_date = datetime.now().strftime("%d.%m.%Y")
     news_input = fetch_latest_news()
 
     prompt = f"""
-Ти — професійний геополітичний аналітик, який пише у стилі класичного реалізму (realpolitik). Оцінюй події через національні інтереси та баланс сил.
-ПИСЬМОВИЙ СТИЛЬ: сухо, жорстко, без AI-кліше та емоцій. Тільки факти.
+Ти — професійний геополітичний аналітик, який пише у стилі класичного реалізму (realpolitik). Оцінюй події через національні інтереси, ресурси та баланс сил.
+ПИСЬМОВИЙ СТИЛЬ: сухо, жорстко, без AI-кліше та емоцій. Тільки факти і зв'язки.
 
 [ПРАВИЛА]
-1. Тільки українська мова.
-2. Жодних емодзі та таблиць.
+1. Тільки грамотна українська мова.
+2. Жодних емодзі та таблиць. Тільки текст і дефіси для списків.
 3. Якщо категорія порожня, пиши: - За останню добу немає нових підтверджених повідомлень у цій категорії.
 
 [ВХІДНІ ДАНІ]
@@ -68,18 +57,15 @@ def generate_digest():
 (список подій через дефіс)
 
 **Анонси самітів та переговорів**
-(список подій через дефіс або статус відсутності)
+(список подій через дефіс або рядок про відсутність)
 """
 
     headers = {
         "x-api-key": ANTHROPIC_API_KEY.strip(),
         "anthropic-version": "2023-06-01",
+        "anthropic-workspace-id": WORKSPACE_ID,
         "content-type": "application/json"
     }
-
-    wks_id = get_workspace_id(headers)
-    if wks_id:
-        headers["anthropic-workspace-id"] = wks_id
 
     payload = {
         "model": "claude-3-5-sonnet-20241022",
@@ -89,12 +75,6 @@ def generate_digest():
     
     url = "https://api.anthropic.com/v1/messages"
     res = requests.post(url, headers=headers, json=payload)
-    
-    # Якщо воркспейс усе ще потрібен, але ендпоінт був закритий, беремо першу доступну модель без нього
-    if res.status_code == 400 and "workspace" in res.text:
-        headers.pop("anthropic-workspace-id", None)
-        payload["model"] = "claude-3-haiku-20240307"
-        res = requests.post(url, headers=headers, json=payload)
 
     if res.status_code != 200:
         raise Exception(f"Помилка від Claude API: {res.text}")
