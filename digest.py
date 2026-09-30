@@ -3,9 +3,10 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace("\r", "").replace("\n", "")
-TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace("\r", "").replace("\n", "")
-TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace("\r", "").replace("\n", "")
+# Очищуємо ключі від випадкових пробілів та перенесень рядків при імпорті з GitHub Secrets
+ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
+TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
+TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
 
 def fetch_latest_news():
     feeds = [
