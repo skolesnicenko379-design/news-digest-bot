@@ -3,35 +3,9 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
-
-def get_active_groq_model(headers):
-    """Шукає найкращу потужну генеративну модель (пріоритет за 70b флагманами)"""
-    try:
-        url = "https://api.groq.com/openai/v1/models"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            models = response.json().get("data", [])
-            model_ids = [m["id"] for m in models]
-            
-            # 1. Пріоритет топовим потужним моделям
-            for preferred in ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"]:
-                if preferred in model_ids:
-                    print(f"Вибрано топову флагманську модель: {preferred}")
-                    return preferred
-            
-            # 2. Якщо флагмана немає, шукаємо будь-яку повноцінну модель, уникаючи сміття
-            for model_id in model_ids:
-                if any(name in model_id.lower() for name in ["llama", "gpt", "mixtral"]) and not any(bad in model_id.lower() for bad in ["guard", "whisper", "embed", "vision", "tool"]):
-                    print(f"Вибрано альтернативну модель: {model_id}")
-                    return model_id
-    except Exception as e:
-        print(f"Не вдалося отримати список моделей автоматично: {e}")
-    
-    # Надійний запасний варіант
-    return "llama-3.3-70b-versatile"
 
 def fetch_latest_news():
     """Збирає заголовки з провідних новинних RSS-джерел"""
@@ -63,12 +37,6 @@ def fetch_latest_news():
     return news_text
 
 def generate_digest():
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    model_name = get_active_groq_model(headers)
     current_date = datetime.now().strftime("%d.%m.%Y")
     news_input = fetch_latest_news()
 
@@ -101,18 +69,26 @@ def generate_digest():
 (список подій через дефіс або рядок про відсутність)
 """
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
     payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3
+        "model": "claude-3-5-sonnet-20241022",
+        "max_tokens": 1500,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
     
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code != 200:
-        raise Exception(f"Помилка від Groq API: {response.text}")
+        raise Exception(f"Помилка від Claude API: {response.text}")
         
-    return response.json()['choices'][0]['message']['content']
+    res_data = response.json()
+    return res_data['content'][0]['text']
 
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -125,7 +101,7 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {response.text}")
 
 if __name__ == "__main__":
-    print("Генеруємо дайджест через Groq (потужна модель)...")
+    print("Генеруємо дайджест через Claude...")
     text = generate_digest()
     
     print("Відправляємо в Telegram...")
