@@ -3,7 +3,7 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
+ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
 
@@ -52,7 +52,7 @@ def generate_digest():
 **Головні новини України**
 (список подій через дефіс)
 
-**Міжнародні події**
+**Міжнародні новини**
 (список подій через дефіс)
 
 **Анонси самітів та переговорів**
@@ -60,23 +60,24 @@ def generate_digest():
 """
 
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
     }
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3
+        "model": "claude-3-7-sonnet-20250219",
+        "max_tokens": 1500,
+        "messages": [{"role": "user", "content": prompt}]
     }
     
-    url = "https://api.groq.com/openai/v1/chat/completions"
+    url = "https://api.anthropic.com/v1/messages"
     res = requests.post(url, headers=headers, json=payload)
 
     if res.status_code != 200:
-        raise Exception(f"Помилка від Groq API: {res.text}")
+        raise Exception(f"Помилка від Claude API: {res.text}")
         
-    return res.json()['choices'][0]['message']['content']
+    return res.json()['content'][0]['text']
 
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -86,7 +87,7 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {res.text}")
 
 if __name__ == "__main__":
-    print("Генеруємо дайджест через Groq...")
+    print("Генеруємо дайджест через Claude...")
     output = generate_digest()
     print("Відправляємо в Telegram...")
     send_to_telegram(output)
