@@ -6,7 +6,9 @@ from datetime import datetime
 ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
-WORKSPACE_ID = "wrkspc_01EMEbmAkwMkFZNa67ST83sm"
+
+# Новий воркспейс для нового ключа
+WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
 
 def fetch_latest_news():
     feeds = [
@@ -60,31 +62,21 @@ def generate_digest():
 (список подій через дефіс або рядок про відсутність)
 """
 
-    url = "https://api.anthropic.com/v1/messages"
-    payload = {
-        "model": "claude-3-haiku-20240307",
-        "max_tokens": 1500,
-        "messages": [{"role": "user", "content": prompt}]
-    }
-
-    # Попытка 1: Отправляем с заголовком воркспейса (для ключа, который привязан к воркспейсу)
-    headers_with_ws = {
+    headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
         "anthropic-workspace-id": WORKSPACE_ID,
         "content-type": "application/json"
     }
-    
-    res = requests.post(url, headers=headers_with_ws, json=payload)
 
-    # Если сервер отвечает, что ключ не scoped (глобальный), пробуем без воркспейса автоматически
-    if res.status_code != 200 and "not scoped to a workspace" in res.text:
-        headers_clean = {
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        res = requests.post(url, headers=headers_clean, json=payload)
+    payload = {
+        "model": "claude-3-5-sonnet-20241022",
+        "max_tokens": 1500,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    
+    url = "https://api.anthropic.com/v1/messages"
+    res = requests.post(url, headers=headers, json=payload)
 
     if res.status_code != 200:
         raise Exception(f"Помилка від Claude API: {res.text}")
