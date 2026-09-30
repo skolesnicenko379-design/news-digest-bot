@@ -3,8 +3,7 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-# Очищуємо ключі від випадкових пробілів та перенесень рядків при імпорті з GitHub Secrets
-ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
+GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
 
@@ -61,24 +60,23 @@ def generate_digest():
 """
 
     headers = {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
     }
 
     payload = {
-        "model": "claude-3-5-sonnet-20241022",
-        "max_tokens": 1500,
-        "messages": [{"role": "user", "content": prompt}]
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
     }
     
-    url = "https://api.anthropic.com/v1/messages"
+    url = "https://api.groq.com/openai/v1/chat/completions"
     res = requests.post(url, headers=headers, json=payload)
 
     if res.status_code != 200:
-        raise Exception(f"Помилка від Claude API: {res.text}")
+        raise Exception(f"Помилка від Groq API: {res.text}")
         
-    return res.json()['content'][0]['text']
+    return res.json()['choices'][0]['message']['content']
 
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -88,7 +86,7 @@ def send_to_telegram(text):
         raise Exception(f"Помилка від Telegram API: {res.text}")
 
 if __name__ == "__main__":
-    print("Генеруємо дайджест...")
+    print("Генеруємо дайджест через Groq...")
     output = generate_digest()
     print("Відправляємо в Telegram...")
     send_to_telegram(output)
