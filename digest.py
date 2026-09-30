@@ -76,7 +76,7 @@ def generate_digest():
         "content-type": "application/json"
     }
     payload = {
-        "model": "claude-3-5-sonnet-latest",
+        "model": "claude-3-5-sonnet-20241022",
         "max_tokens": 1500,
         "messages": [
             {"role": "user", "content": prompt}
