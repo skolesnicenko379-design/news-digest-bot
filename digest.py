@@ -6,6 +6,7 @@ from datetime import datetime
 ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
+WORKSPACE_ID = "wrkspc_01EMEbmAkwMkFZNa67ST83sm"
 
 def fetch_latest_news():
     feeds = [
@@ -62,11 +63,12 @@ def generate_digest():
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
+        "anthropic-workspace-id": WORKSPACE_ID,
         "content-type": "application/json"
     }
 
     payload = {
-        "model": "claude-3-haiku-20240307",
+        "model": "claude-3-5-sonnet-20241022",
         "max_tokens": 1500,
         "messages": [{"role": "user", "content": prompt}]
     }
