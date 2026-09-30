@@ -66,7 +66,7 @@ def generate_digest():
     }
 
     payload = {
-        "model": "claude-3-7-sonnet-20250219",
+        "model": "claude-3-5-haiku-20241022",
         "max_tokens": 1500,
         "messages": [{"role": "user", "content": prompt}]
     }
