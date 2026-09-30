@@ -6,7 +6,7 @@ from datetime import datetime
 ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
-WORKSPACE_ID = "wrkspc_01EMEbmAkwMkFZNa67ST83sm"
+WORKSPACE_ID = "6c1a0f12-068a-8118-8000-0654759aaa20"
 
 def fetch_latest_news():
     feeds = [
