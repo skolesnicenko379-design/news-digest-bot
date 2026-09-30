@@ -3,10 +3,9 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
-WORKSPACE_ID = "wrkspc_01EMEbmAkwMkFZNa67ST83sm"
+ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace("\r", "").replace("\n", "")
+TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace("\r", "").replace("\n", "")
+TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace("\r", "").replace("\n", "")
 
 def fetch_latest_news():
     feeds = [
@@ -61,9 +60,8 @@ def generate_digest():
 """
 
     headers = {
-        "x-api-key": ANTHROPIC_API_KEY.strip(),
+        "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
-        "anthropic-workspace-id": WORKSPACE_ID.strip().lower(),
         "content-type": "application/json"
     }
 
@@ -75,11 +73,6 @@ def generate_digest():
     
     url = "https://api.anthropic.com/v1/messages"
     res = requests.post(url, headers=headers, json=payload)
-
-    # Якщо префікс вимагає скорочений формат wks_
-    if res.status_code == 400 and "workspace" in res.text:
-        headers["anthropic-workspace-id"] = WORKSPACE_ID.strip().replace("Wrkspc_", "wks_").replace("wrkspc_", "wks_")
-        res = requests.post(url, headers=headers, json=payload)
 
     if res.status_code != 200:
         raise Exception(f"Помилка від Claude API: {res.text}")
