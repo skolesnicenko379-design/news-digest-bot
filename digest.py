@@ -11,7 +11,7 @@ ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-lates
 WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
 
 def fetch_latest_news():
-   feeds = [
+    feeds = [
         "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml", # Defense News
         "https://breakingdefense.com/feed/",                                 # Breaking Defense
         "https://www.politico.com/rss/defense.xml",                          # Politico Defense
