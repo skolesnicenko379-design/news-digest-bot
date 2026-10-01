@@ -11,87 +11,96 @@ ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-lates
 WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
 
 def fetch_latest_news():
-    feeds = [
-        "https://foreignpolicy.com/feed/",
-        "https://www.politico.com/rss/politicopicks.xml",
-        "https://thehill.com/policy/international/feed/",
-        "https://www.csis.org/rss/all",
-        "https://www.state.gov/rss-feed/press-releases/feed/",
-        "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml",
-        "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml",
-        "https://breakingdefense.com/feed/"
+    # Тематичні запити через Google News з жорстким фільтром за 24 години
+    search_queries = [
+        "US foreign policy OR diplomacy OR State Department when:24h",
+        "US sanctions OR trade tariffs OR export controls China when:24h",
+        "Pentagon OR defense budget OR military aid Ukraine Taiwan when:24h",
+        "geopolitics alliance NATO Indo-Pacific US when:24h"
     ]
     
-    news_text = ""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    print("--- СТАТУС ЗАВАНТАЖЕННЯ ДЖЕРЕЛ ---")
-    for feed_url in feeds:
+    news_text = ""
+    seen_titles = set()
+    
+    print("--- ЗАВАНТАЖЕННЯ ЧЕРЕЗ GOOGLE NEWS RSS (ОСТАННІ 24 ГОДИНИ) ---")
+    for query in search_queries:
+        encoded_query = requests.utils.quote(query)
+        url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
+        
         try:
-            res = requests.get(feed_url, headers=headers, timeout=10)
-            source_name = feed_url.split('/')[2].replace('www.', '')
-            
+            res = requests.get(url, headers=headers, timeout=10)
             if res.status_code == 200:
                 root = ET.fromstring(res.content)
-                items = root.findall('.//item') or root.findall('.//{http://www.w3.org/2005/Atom}entry')
-                count = 0
-                for item in items[:15]:
-                    title_elem = item.find('title') or item.find('{http://www.w3.org/2005/Atom}title')
+                items = root.findall('.//item')
+                added = 0
+                for item in items[:10]:
+                    title_elem = item.find('title')
+                    source_elem = item.find('source')
+                    
                     if title_elem is not None and title_elem.text:
-                        news_text += f"- [{source_name}] {title_elem.text.strip()}\n"
-                        count += 1
-                print(f"✅ {source_name}: зібрано {count} новин")
+                        raw_title = title_elem.text.strip()
+                        source_name = source_elem.text.strip() if source_elem is not None and source_elem.text else "Google News"
+                        
+                        # Відсікаємо дублікати
+                        if raw_title not in seen_titles:
+                            seen_titles.add(raw_title)
+                            news_text += f"- [{source_name}] {raw_title}\n"
+                            added += 1
+                print(f"✅ Запит '{query[:30]}...': отримано {added} новин")
             else:
-                print(f"❌ {source_name}: БЛОКУВАННЯ (Код {res.status_code})")
+                print(f"❌ Запит '{query[:30]}...': помилка {res.status_code}")
         except Exception as e:
-            print(f"⚠️ {feed_url}: ПОМИЛКА ПАРСИНГУ ({e})")
+            print(f"⚠️ Помилка з'єднання: {e}")
             continue
             
-    print("----------------------------------\n")
+    print(f"Усього відібрано унікальних новин: {len(seen_titles)}\n")
     return news_text
 
 def generate_digest():
     current_date = datetime.now().strftime("%d.%m.%Y")
     news_input = fetch_latest_news()
 
-    print(f"[DEBUG] Обсяг зібраного тексту: {len(news_input)} символів.")
-    
-    if len(news_input.strip()) < 50:
-        return f"Дайджест зовнішньої політики США | {current_date}\n\nПомилка: Бот не зміг завантажити жодної новини з джерел через блокування IP-адреси GitHub Actions."
+    if len(news_input.strip()) < 100:
+        return f"Дайджест зовнішньої політики США | {current_date}\n\nЗа останні 24 години у джерелах не зафіксовано новин для аналізу."
 
-    system_prompt = f"""Ти — провідний експерт з міжнародної політики та геостратегії США. Проаналізуй вхідні новини за останні 24 години та склади концентрований геополітичний дайджест.
+    system_prompt = f"""Ти — старший аналітик міжнародної політики та геостратегії США. Твоє завдання — проаналізувати вхідні новини за останні 24 години, виокремити стратегічні події для Вашингтона та підготувати глибокий аналітичний дайджест.
 
 СЬОГОДНІШНЯ ДАТА: {current_date}
 
-МЕТОДОЛОГІЯ ТА АНАЛІТИЧНА ОПТИКА:
-1. Баланс сил: більшість міжнародних подій (конфлікти, саміти в ЄС чи Азії, економічні кризи) прямо чи опосередковано впливають на позиції Вашингтона. Твоє завдання — пояснити цей зв'язок. Навіть якщо новина прямо не згадує США, поясни її значення для американської геостратегії.
-2. Геоекономіка: санкції, тарифи, ланцюги постачання критичних ресурсів та технологій.
-3. Академічний, строгий стиль: формат аргументації "подія — механізм — наслідок для балансу сил". Ніякої публіцистики.
+МЕТОДОЛОГІЯ ТА СТИЛЬ:
+1. Реалізм та архітектура стримування: оцінюй саміти, двосторонні зустрічі, регіональні альянси та рухи сил через національні інтереси США, баланс сил та стримування опонентів (КНР, РФ, Іран).
+2. Геоекономіка та ресурси: фіксуй санкційні механізми, торговельні тарифи, контроль над експортом мікроелектроніки/ШІ, постачання енергоносіїв та пакети військово-фінансової допомоги.
+3. Матеріальна база: зіставляй публічні заяви політиків із рішеннями Конгресу, Пентагону та контрактними зобов'язаннями.
+4. Академічний стиль: ланцюжки "рішення/подія — задіяний важіль — зміна регіонального чи глобального балансу сил". Без публіцистики, емоцій чи AI-кліше.
+5. АНТИ-ГАЛЮЦИНАЦІЯ: Використовуй лише ті події, які реально наведені у вхідному списку новин.
 
 СУВОРІ ОБМЕЖЕННЯ ФОРМАТУВАННЯ:
-- Максимальний обсяг: до 2100 символів.
-- КАТЕГОРИЧНО ЗАБОРОНЕНО використовувати капслок для заголовків. 
-- Жодних таблиць, псевдографіки, рамок.
+- Максимальний обсяг: до 2100 символів (з пробілами).
+- КАТЕГОРИЧНО ЗАБОРОНЕНО використовувати заголовки ВСІМА ВЕЛИКИМИ ЛІТЕРАМИ (капслок заборонено).
+- Жодних таблиць (символів "|") та псевдографіки.
 - Жодних заголовків Markdown (#, ##, ###).
-- Жодних зірочок (**) чи підкреслень (_).
+- Жодних зірочок (**) чи нижніх підкреслень (_).
 - Марковані списки лише через дефіс ("- ").
 - Жодних емодзі.
 
 СТРУКТУРА:
 Дайджест зовнішньої політики США | {current_date}
-(1-2 речення: ключовий геостратегічний фокус доби)
+(1-2 лаконічних речення: головний стратегічний вектор доби у діях Вашингтона)
 
 Міжнародна політика, дипломатія та альянси
-- [Суть події у 2-3 реченнях. Вкажи джерело].
+- [Суть події у 2-3 реченнях: зміст перемовин, самітів чи військово-політичних дій. Вкажи джерело у дужках].
+- [Наступна подія через дефіс].
 
 Геоекономіка, санкції та внутрішні рішення
-- [Суть події у 2-3 реченнях. Вкажи джерело].
+- [Суть події у 2-3 реченнях: тарифи, санкції, оборонне фінансування, рішення Конгресу/Білого дому. Вкажи джерело у дужках].
+- [Наступна подія через дефіс].
 
 Аналітичний висновок
-(Один цілісний абзац на 3-4 речення).
+(Один зв'язний абзац на 3-4 речення: як події доби трансформують геополітичні позиції США.)
 """
 
     headers = {
@@ -108,7 +117,7 @@ def generate_digest():
         "messages": [
             {
                 "role": "user", 
-                "content": f"Ось фактичні стрічки новин:\n\n{news_input}"
+                "content": f"Ось стрічка новин за останні 24 години:\n\n{news_input}"
             }
         ]
     }
@@ -117,7 +126,7 @@ def generate_digest():
     res = requests.post(url, headers=headers, json=payload, timeout=60)
 
     if res.status_code != 200:
-        raise Exception(f"Помилка від Claude API ({res.status_code}): {res.text}")
+        raise Exception(f"Помилка Claude API ({res.status_code}): {res.text}")
         
     return res.json()['content'][0]['text']
 
@@ -126,14 +135,14 @@ def send_to_telegram(text):
     payload = {"chat_id": TELEGRAM_CHANNEL_ID, "text": text}
     res = requests.post(url, json=payload)
     if res.status_code != 200:
-        raise Exception(f"Помилка від Telegram API: {res.text}")
+        raise Exception(f"Помилка Telegram API: {res.text}")
 
 if __name__ == "__main__":
-    print(f"Генеруємо дайджест через Claude (модель: {ANTHROPIC_MODEL})...")
+    print(f"Генеруємо аналітичний дайджест (модель: {ANTHROPIC_MODEL})...")
     output = generate_digest()
-    print("\n--- ГОТОВИЙ ТЕКСТ ---")
+    print("\n--- ЗГЕНЕРОВАНИЙ ДАЙДЖЕСТ ---")
     print(output)
-    print("---------------------\n")
+    print("----------------------------\n")
     print("Відправляємо в Telegram...")
     send_to_telegram(output)
     print("Успішно надіслано в канал!")
