@@ -11,11 +11,11 @@ ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-lates
 WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
 
 def fetch_latest_news():
-    feeds = [
-        "https://www.pravda.com.ua/rss/",
-        "https://rssexport.rbc.ua/inter/ukr/news.rss",
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml"
+   feeds = [
+        "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml", # Defense News
+        "https://breakingdefense.com/feed/",                                 # Breaking Defense
+        "https://www.politico.com/rss/defense.xml",                          # Politico Defense
+        "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml"          # BBC (лише США)
     ]
     news_text = ""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
