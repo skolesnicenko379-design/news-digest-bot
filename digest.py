@@ -175,13 +175,11 @@ def generate_digest():
     url = "https://api.anthropic.com/v1/messages"
     # Відповідь може затримуватися, коли модель обробляє великий список новин.
     # Повторюємо запит до двох разів після тайм-ауту та збільшуємо час очікування.
-    last_timeout = None
     for attempt in range(3):
         try:
             res = requests.post(url, headers=headers, json=payload, timeout=(15, 180))
             break
         except requests.exceptions.Timeout as exc:
-            last_timeout = exc
             if attempt == 2:
                 raise Exception(
                     "Claude API не повернув відповідь за 180 секунд після 3 спроб. "
