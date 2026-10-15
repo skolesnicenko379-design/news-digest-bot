@@ -8,7 +8,7 @@ TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replac
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
 
 ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-latest").strip()
-WORKSPACE_ID = "wrkspc_01G5WDSbhu31zt3TZ1hoywWp"
+WORKSPACE_ID = (os.environ.get("WORKSPACE_ID") or "").strip()
 
 def fetch_latest_news():
     # Тематичні запити через Google News з жорстким фільтром за 24 години
