@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -172,12 +173,32 @@ def generate_digest():
     }
     
     url = "https://api.anthropic.com/v1/messages"
-    res = requests.post(url, headers=headers, json=payload, timeout=60)
+    # Відповідь може затримуватися, коли модель обробляє великий список новин.
+    # Повторюємо запит до двох разів після тайм-ауту та збільшуємо час очікування.
+    last_timeout = None
+    for attempt in range(3):
+        try:
+            res = requests.post(url, headers=headers, json=payload, timeout=(15, 180))
+            break
+        except requests.exceptions.Timeout as exc:
+            last_timeout = exc
+            if attempt == 2:
+                raise Exception(
+                    "Claude API не повернув відповідь за 180 секунд після 3 спроб. "
+                    "Спробуй зменшити кількість новин у запиті або перевірити статус Anthropic API."
+                ) from exc
+            wait_seconds = 5 * (attempt + 1)
+            print(f"Тайм-аут Claude API (спроба {attempt + 1}/3). Повтор через {wait_seconds} с...")
+            time.sleep(wait_seconds)
 
     if res.status_code != 200:
         raise Exception(f"Помилка Claude API ({res.status_code}): {res.text}")
-        
-    return res.json()['content'][0]['text']
+
+    data = res.json()
+    if not data.get("content") or not data["content"][0].get("text"):
+        raise Exception(f"Claude API повернув відповідь без тексту: {data}")
+
+    return data["content"][0]["text"]
 
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
