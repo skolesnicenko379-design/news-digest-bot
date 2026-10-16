@@ -136,6 +136,10 @@ def _extract_article(candidate):
     try:
         response = requests.get(candidate["rss_url"], headers=headers, timeout=(7, 12), allow_redirects=True)
         final_url = response.url or candidate["rss_url"]
+        # Preserve usable RSS excerpts for access-denied/paywalled pages, but
+        # discard URLs that are clearly gone or whose publisher server failed.
+        if response.status_code in (404, 410) or response.status_code >= 500:
+            return None
         page_available = response.status_code == 200
 
         final_host = _host(final_url)
