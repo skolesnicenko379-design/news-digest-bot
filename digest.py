@@ -29,7 +29,10 @@ def _normalize_url(url):
         parts = urlsplit(url.strip())
         if parts.scheme not in {"http", "https"} or not parts.netloc:
             return ""
-        return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
+        netloc = parts.netloc.lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        return urlunsplit((parts.scheme.lower(), netloc, parts.path.rstrip("/"), parts.query, ""))
     except (TypeError, ValueError):
         return ""
 
