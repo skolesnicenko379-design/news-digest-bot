@@ -368,7 +368,7 @@ def fetch_latest_news():
         futures = [executor.submit(_extract_article, candidate) for candidate in candidates]
         for future in as_completed(futures):
             article = future.result()
-            if article:
+            if article and article["_tier"] > 0:
                 articles.append(article)
 
     # Exact URL deduplication only. Similar headlines from different sources remain available
