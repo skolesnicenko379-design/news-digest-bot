@@ -30,36 +30,58 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install requests
 
       - name: Compile Python
         run: python -m py_compile digest.py
 
-      - name: Smoke-test source and URL safeguards
+      - name: Smoke-test web research and source-link safeguards
         run: |
           python - <<'PY'
           import digest
 
-          assert digest._source_tier("Reuters", "https://www.reuters.com/world/") == 3
-          assert digest._source_tier("TASS", "https://tass.com/news/") == 0
-          assert digest._clean_html("<p>Market update &amp; policy</p>") == "Market update & policy"
-          assert digest._parse_pubdate("Fri, 16 Oct 2026 08:00:00 GMT") is not None
+          assert digest.ANTHROPIC_MODEL
+          assert not hasattr(digest, "fetch_latest_news"), "Legacy RSS collector should be removed"
+          assert digest._normalize_url("https://Reuters.com/world/story/#section") == "https://reuters.com/world/story"
 
-          evidence = [{"url": "https://www.reuters.com/world/example"}]
+          blocks = [
+              {
+                  "type": "web_search_tool_result",
+                  "content": [
+                      {"type": "web_search_result", "url": "https://www.reuters.com/world/story", "title": "Reuters story"},
+                      {"type": "web_search_result", "url": "https://apnews.com/article/story", "title": "AP story"},
+                  ],
+              },
+              {
+                  "type": "text",
+                  "text": "Verified report",
+                  "citations": [
+                      {"type": "web_search_result_location", "url": "https://www.bbc.com/news/story", "title": "BBC story"}
+                  ],
+              },
+          ]
+          sources = digest._extract_search_sources(blocks)
+          assert len(sources) == 3
+          assert "https://reuters.com/world/story" in sources
+          assert "https://apnews.com/article/story" in sources
+          assert "https://bbc.com/news/story" in sources
+
+          allowed = set(sources)
           digest._validate_digest_urls(
-              "Update [Reuters](https://www.reuters.com/world/example)",
-              evidence
+              "Update [Reuters](https://www.reuters.com/world/story) and [AP](https://apnews.com/article/story)",
+              allowed,
           )
 
-          try:
-              digest._validate_digest_urls(
-                  "Update [Reuters](https://example.invalid/fake)",
-                  evidence
-              )
-          except RuntimeError:
-              pass
-          else:
-              raise AssertionError("A non-source URL was not blocked")
+          for invalid_digest in (
+              "Update [Fake](https://example.invalid/fake)",
+              "Update with no citations",
+          ):
+              try:
+                  digest._validate_digest_urls(invalid_digest, allowed)
+              except RuntimeError:
+                  pass
+              else:
+                  raise AssertionError(f"Invalid source link was not blocked: {invalid_digest}")
 
-          print("Smoke tests passed.")
+          print("Web research smoke tests passed.")
           PY
