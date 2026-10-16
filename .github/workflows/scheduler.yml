@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 5 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Generate a preview without posting to Telegram"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   run-digest:
@@ -29,4 +35,5 @@ jobs:
           ANTHROPIC_MODEL: claude-sonnet-4-5-20250929
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: python digest.py
