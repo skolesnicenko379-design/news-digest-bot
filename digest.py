@@ -50,6 +50,14 @@ def _extract_search_sources(content_blocks):
             if isinstance(result_content, list):
                 candidates.extend(result_content)
 
+        if block.get("type") == "web_fetch_tool_result":
+            result_content = block.get("content")
+            if isinstance(result_content, dict) and result_content.get("type") == "web_fetch_result":
+                candidates.append({
+                    "url": result_content.get("url", ""),
+                    "title": (result_content.get("content") or {}).get("title", "")
+                })
+
         if block.get("type") == "text":
             citations = block.get("citations") or []
             if isinstance(citations, list):
@@ -81,16 +89,27 @@ def _call_anthropic(system_prompt, user_content, max_tokens=2600, use_web_search
 
     tools = []
     if use_web_search:
-        tools = [{
-            "type": "web_search_20250305",
-            "name": "web_search",
-            "max_uses": 8,
-            # Block known Russian state propaganda; do not restrict the search to a fixed list of publishers.
-            "blocked_domains": [
-                "rt.com", "sputniknews.com", "tass.com", "ria.ru",
-                "lenta.ru", "news-front.su", "southfront.org"
-            ]
-        }]
+        blocked_domains = [
+            "rt.com", "sputniknews.com", "tass.com", "ria.ru",
+            "lenta.ru", "news-front.su", "southfront.org"
+        ]
+        tools = [
+            {
+                "type": "web_search_20250305",
+                "name": "web_search",
+                "max_uses": 8,
+                # Do not restrict discovery to a fixed list of publishers.
+                "blocked_domains": blocked_domains
+            },
+            {
+                "type": "web_fetch_20250910",
+                "name": "web_fetch",
+                "max_uses": 8,
+                "max_content_tokens": 16000,
+                "citations": {"enabled": True},
+                "blocked_domains": blocked_domains
+            }
+        ]
 
     messages = [{"role": "user", "content": user_content}]
     found_sources = {}
@@ -181,7 +200,7 @@ def generate_digest():
 Поточний час: {now_label}, часовий пояс Europe/Kyiv. Часове вікно новин: від {since_label} до {now_label}.
 
 ТВОЄ ЗАВДАННЯ
-Самостійно знайди актуальні новини у відкритому вебі за останні 24 години, прочитай доступні сторінки, звір факти й сформуй готовий дайджест. Не чекай на наданий список матеріалів: його не буде. Не спирайся на RSS-заголовки або пам'ять моделі замість актуального пошуку. Не обмежуйся конкретним переліком сайтів чи видань: знаходь першоджерела, надійні міжнародні медіа, регіональні видання та офіційні документи залежно від події.
+Самостійно знайди актуальні новини у відкритому вебі за останні 24 години, відкрий і прочитай повні тексти найважливіших сторінок за допомогою web fetch, звір факти й сформуй готовий дайджест. Для важливих подій перевіряй як мінімум одну додаткову незалежну публікацію або первинний документ. Не чекай на наданий список матеріалів: його не буде. Не спирайся на RSS-заголовки або пам'ять моделі замість актуального пошуку. Не обмежуйся конкретним переліком сайтів чи видань: знаходь першоджерела, надійні міжнародні медіа, регіональні видання та офіційні документи залежно від події.
 
 ПОШУК
 Зроби кілька окремих пошукових запитів, не витрачай усі на одну тему. Охопи міжнародні відносини та рішення урядів; США й Америки; Європу та НАТО; Китай, Східну й Південну Азію; Близький Схід; Африку; світову макроекономіку, фінанси, торгівлю, енергетику й технологічні ланцюги постачання. Порівнюй результати між регіонами й темами. Це напрями пошуку, а не квоти на публікацію. Шукати потрібно події, оприлюднені протягом зазначеного часового вікна; старі події включай лише за наявності нового важливого розвитку саме в цей період.
