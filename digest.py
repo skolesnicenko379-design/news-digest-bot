@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 ANTHROPIC_API_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip().replace('\r', '').replace('\n', '')
 TELEGRAM_CHANNEL_ID = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip().replace('\r', '').replace('\n', '')
+DRY_RUN = (os.environ.get("DRY_RUN") or "").strip().casefold() in {"1", "true", "yes", "on"}
 
 ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_MODEL") or "claude-3-5-sonnet-latest").strip()
 WORKSPACE_ID = (os.environ.get("WORKSPACE_ID") or "").strip()
@@ -616,6 +617,9 @@ if __name__ == "__main__":
     print("\n--- ЗГЕНЕРОВАНИЙ ДАЙДЖЕСТ ---")
     print(output)
     print("----------------------------\n")
-    print("Відправляємо в Telegram...")
-    send_to_telegram(output)
-    print("Успішно надіслано в канал!")
+    if DRY_RUN:
+        print("DRY_RUN активний: дайджест лише показано в журналах; у Telegram його не надіслано.")
+    else:
+        print("Відправляємо в Telegram...")
+        send_to_telegram(output)
+        print("Успішно надіслано в канал!")
