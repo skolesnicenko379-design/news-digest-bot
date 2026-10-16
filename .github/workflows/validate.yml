@@ -1,0 +1,65 @@
+name: Validate digest bot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "digest.py"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "digest.py"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Compile Python
+        run: python -m py_compile digest.py
+
+      - name: Smoke-test source and URL safeguards
+        run: |
+          python - <<'PY'
+          import digest
+
+          assert digest._source_tier("Reuters", "https://www.reuters.com/world/") == 3
+          assert digest._source_tier("TASS", "https://tass.com/news/") == 0
+          assert digest._clean_html("<p>Market update &amp; policy</p>") == "Market update & policy"
+          assert digest._parse_pubdate("Fri, 16 Oct 2026 08:00:00 GMT") is not None
+
+          evidence = [{"url": "https://www.reuters.com/world/example"}]
+          digest._validate_digest_urls(
+              "Update [Reuters](https://www.reuters.com/world/example)",
+              evidence
+          )
+
+          try:
+              digest._validate_digest_urls(
+                  "Update [Reuters](https://example.invalid/fake)",
+                  evidence
+              )
+          except RuntimeError:
+              pass
+          else:
+              raise AssertionError("A non-source URL was not blocked")
+
+          print("Smoke tests passed.")
+          PY
