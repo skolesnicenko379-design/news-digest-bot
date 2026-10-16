@@ -143,9 +143,27 @@ def _extract_article(candidate):
         page_available = response.status_code == 200
 
         final_host = _host(final_url)
-        if not final_host or final_host == "news.google.com" or final_host.endswith(".google.com"):
-            # Do not publish aggregator URLs as if they were publisher originals.
+        if not final_host:
             return None
+        if final_host == "news.google.com" or final_host.endswith(".google.com"):
+            # Google News sometimes serves an interstitial instead of redirecting to the
+            # publisher. Keep a clearly labelled RSS excerpt as a last-resort fallback so
+            # one inaccessible page cannot stop the entire digest.
+            excerpt = candidate.get("rss_description", "").strip()
+            publisher = candidate.get("rss_source", "Видавець не визначений")
+            if len(excerpt) < 100 or _source_tier(publisher, candidate.get("rss_source_url", "")) == 0:
+                return None
+            return {
+                "title": candidate["title"],
+                "source": publisher,
+                "published_at": candidate["published_at"].astimezone(ZoneInfo("Europe/Kyiv")).strftime("%Y-%m-%d %H:%M %Z"),
+                "url": candidate["rss_url"],
+                "evidence_type": "лише фрагмент Google News RSS; пряму сторінку видавця не вдалося відкрити",
+                "text": excerpt[:1000],
+                "_tier": _source_tier(publisher, candidate.get("rss_source_url", "")),
+                "_impact": _headline_impact(candidate["title"]),
+                "_date": candidate["published_at"]
+            }
 
         soup = BeautifulSoup(response.text if page_available else "", "html.parser")
         canonical_tag = soup.find("link", rel=lambda value: value and "canonical" in value)
@@ -337,6 +355,7 @@ def fetch_latest_news():
                     "title": title,
                     "rss_source": rss_source,
                     "rss_url": link_element.text.strip(),
+                    "rss_source_url": (source_element.get("url", "").strip() if source_element is not None else ""),
                     "rss_description": rss_description,
                     "published_at": published_at,
                     "_tier": _source_tier(rss_source, (source_element.get("url", "") if source_element is not None else "")),
@@ -485,7 +504,7 @@ def generate_digest():
 Використовуй тільки факти, прямо підтримані наданим текстом або описом. Не стверджуй, що прочитав повну статтю, якщо вказано лише фрагмент. Не використовуй власні знання як підтвердження актуальних подій. Не вигадуй фактів, цифр, цитат, причин, мотивів, посад, дат, домовленостей або наслідків. Якщо матеріалу недостатньо для надійного переказу, пропусти його.
 
 ## ДОСТОВІРНІСТЬ І ДЖЕРЕЛА
-1. Джерело має відповідати прямому URL і назві видавця у вхідному записі. Усі посилання в готовому дайджесті повинні бути точними URL із вхідних даних. Не створюй посилань самостійно, не використовуй Google News як джерело та не посилайся на матеріал, якого немає у вхідному масиві.
+1. Назва видавця має відповідати вхідному запису. Усі посилання в готовому дайджесті повинні бути точними URL із вхідних даних. Не створюй посилань самостійно й не посилайся на матеріал, якого немає у вхідному масиві. Якщо evidence_type повідомляє, що доступний лише фрагмент Google News RSS, сприймай його тільки як короткий опис, не називай його повним текстом статті; посилання на Google News у такому разі є лише перенаправленням до матеріалу видавця, а не окремим джерелом.
 2. Перевір, чи повідомляють різні видавці про ту саму подію. Якщо доступні два або більше справді окремих матеріали, посилайся на них разом. Не вважай передруки або матеріали, які просто повторюють заяву однієї сторони, незалежним підтвердженням.
 3. Якщо важливе твердження спирається лише на один матеріал, чітко напиши «За даними [джерело]» або «За заявою [установа]». Для значущого, але одноджерельного повідомлення зазнач: «Незалежного підтвердження в доступних матеріалах немає». Не перетворюй одне повідомлення на беззастережно встановлений факт.
 4. Офіційна заява достовірно відображає позицію установи, яка її оприлюднила, але сама по собі не доводить усіх звинувачень або оцінок цієї установи. Чітко атрибутуй спірні твердження.
