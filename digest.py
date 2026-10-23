@@ -264,9 +264,9 @@ def generate_digest():
             "Не додавай нових фактів. Поверни тільки текст."
         )
         shorter_input = (
-            "ДОЗВОЛЕНІ ТОЧНІ URL (використовуй тільки їх):\\n"
+            "ДОЗВОЛЕНІ ТОЧНІ URL (використовуй тільки їх):\n"
             + source_list
-            + "\\n\\nТекст для скорочення:\\n"
+            + "\n\nТекст для скорочення:\n"
             + output
         )
         output, _ = _call_anthropic(shorter_prompt, shorter_input, max_tokens=1400, use_web_search=False)
